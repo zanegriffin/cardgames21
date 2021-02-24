@@ -1,45 +1,55 @@
 import React, {useState, useEffect} from 'react'
-import { Button, Modal } from 'react-bootstrap'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons'
 import './App.scss';
+import {Button} from 'react-bootstrap'
+
+import Rules from './Components/Rules'
+import Card from './Components/Card'
 
 function App() {
 
   // states
   const [deckID, setDeckID] = useState('')
   const [hand, setHand] = useState([])
+  const [dealerhand, setDealerHand] = useState([])
   const [remainingCards, setRemainingCards] = useState(0)
   const [money, setMoney] = useState(1000)
-
-  // bootstrap modal - rules pop up logic
-  const [show, setShow] = useState(false);
-
-  const handleClose = () => setShow(false);
-  const handleShow = () => setShow(true);
 
   // api calls
   const getDeck = () => {
     fetch('https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count=6')
     .then(response => {
-      setDeckID(response.deck_id)
-      setRemainingCards(response.remaining)
+      response.json().then(data => {
+        setDeckID(data.deck_id)
+        setRemainingCards(data.remaining)
+        drawCards(data.deck_id)
+      })
+      
     })
+    
   }
 
-  const drawCards = () => {
+  const drawCards = (deckID) => {
+    fetch(`https://deckofcardsapi.com/api/deck/${deckID}/draw/?count=2`)
+    .then(response => response.json().then(data => {
+      setHand(data.cards)
+      setRemainingCards(data.remaining)
+    }))
+  }
+
+  const drawDealerCards = () => {
     fetch(`https://deckofcardsapi.com/api/deck/${deckID}/draw/?count=2`)
     .then(response => {
-      setHand(response.cards)
+      setDealerHand(response.cards)
       setRemainingCards(response.remaining)
     })
   }
 
   const hitCard = () => {
     fetch(`https://deckofcardsapi.com/api/deck/${deckID}/draw/?count=1`)
-    .then(response => {
-      setHand([...hand, response.cards])
-    })
+    .then(response => response.json().then(data => {
+      setHand([...hand, data.cards[0]])
+      rerenderHand()
+    }))
   }
 
   const newRound = () => {
@@ -51,50 +61,49 @@ function App() {
   }
 
   // game logic
-  // game start
+  // game start on load
   useEffect(() => {
     getDeck()
-    drawCards()
   }, [])
 
   // rendering 
+  let playerhand = hand.map((card) => {
+    return(
+      <Card image={card.image} />
+    )
+  })
 
+  const rerenderHand = () => {
+    playerhand = hand.map((card) => {
+      return(
+        <Card image={card.image} />
+      )
+    })
+  }
+  let halfwayThrough = Math.floor(playerhand.length / 2)
+// or instead of floor you can use ceil depending on what side gets the extra data
+
+  let arrayFirstHalf = playerhand.slice(0, halfwayThrough);
+  let arraySecondHalf = playerhand.slice(halfwayThrough, playerhand.length);
+  console.log(hand)
   return (
     <div className="App">
-      <Button variant="primary" onClick={handleShow}>
-        <FontAwesomeIcon icon={faQuestionCircle} size='lg'/>
-      </Button>
-
-      <Modal show={show} 
-             onHide={handleClose} 
-             size='lg'
-             centered 
-             backdrop="static" 
-             >
-        <Modal.Header closeButton>
-          <Modal.Title>How to play 21</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <ul>
-            <li>Beat the dealer's hand without going over 21.</li>
-            <li>Face cards are worth 10. Aces are worth 1 or 11, whichever makes a better hand.</li>
-            <li>You start with 2 cards, dealer's hand is revealed at the end.</li>
-            <li>You may 'hit' to get another card, or 'stand' to pass and end the round.</li>
-            <li>Dealer wins if you 'bust' or go over 21.</li>
-            <li>Dealer will hit until their hand is 17 or higher.</li>
-            <li>Doubles and splitting currently unavailable.</li>
-            <li>Leave your feed back <a target='_blank' href='https://docs.google.com/forms/d/e/1FAIpQLSe7e6aPBwjQHnIPerQeNcV7dQfuLi-cciCFlUV8dR6amDlTEg/viewform?usp=sf_link'>here</a></li>
-          </ul>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
+      <Rules />
       <div className='table'>
-
+        <div className='options'>
+          <Button variant="danger" onClick={hitCard}>Hit</Button>
+          <Button variant="danger">Stand</Button>
+        </div>
+        <div className='hand'>
+          {playerhand.length > 5 ? 
+          <>
+          <div className='row-container'>
+            <div className='card-row'>{arrayFirstHalf}</div>
+            <div className='card-row'>{arraySecondHalf}</div>
+          </div>
+          </>
+          : <div className='card-container'>{playerhand}</div>}
+        </div>
       </div>
     </div>
   );
