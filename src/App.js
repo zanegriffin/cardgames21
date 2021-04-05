@@ -13,6 +13,9 @@ function App() {
   const [dealerhand, setDealerHand] = useState([])
   const [remainingCards, setRemainingCards] = useState(0)
   const [money, setMoney] = useState(1000)
+  const [start, setStart] = useState(false)
+  const [bust, setBust] = useState(false)
+  const [win, setWin] = useState(false)
 
   // api calls
   const getDeck = () => {
@@ -61,10 +64,40 @@ function App() {
   }
 
   // game logic
-  // game start on load
-  useEffect(() => {
-    getDeck()
-  }, [])
+  let score = 0
+  let ace = false
+  const calculateScore = () => {
+    score = 0
+    for(let i = 0 ; i < hand.length; i++){
+      if( hand[i].value === 'ACE'){
+        score += 1
+        ace = true
+      } else if(!parseInt(hand[i].value)){
+        score += 10
+        // console.log('here', score)
+      } else {
+        score += parseInt(hand[i].value)
+        // console.log('there', parseInt(hand[i].value))
+      }
+    }
+    if(score < 12 && ace === true){
+      score += 10
+    }
+    console.log(score)
+  }
+  calculateScore()
+
+  //bust logic
+  const isBust = () => {
+    if(score > 21){
+      setBust(true)
+      setStart(false)
+      setHand([])
+      score = 0
+    }
+  }
+  isBust()
+
 
   // rendering 
   let playerhand = hand.map((card) => {
@@ -85,26 +118,42 @@ function App() {
 
   let arrayFirstHalf = playerhand.slice(0, halfwayThrough);
   let arraySecondHalf = playerhand.slice(halfwayThrough, playerhand.length);
-  console.log(hand)
+  
   return (
     <div className="App">
       <Rules />
-      <div className='table'>
-        <div className='options'>
-          <Button variant="danger" onClick={hitCard}>Hit</Button>
-          <Button variant="danger">Stand</Button>
-        </div>
-        <div className='hand'>
-          {playerhand.length > 5 ? 
-          <>
-          <div className='row-container'>
-            <div className='card-row'>{arrayFirstHalf}</div>
-            <div className='card-row'>{arraySecondHalf}</div>
-          </div>
-          </>
-          : <div className='card-container'>{playerhand}</div>}
-        </div>
-      </div>
+      <section>
+          {start ? <div className='table'>
+            <div className='options'>
+              <Button variant="danger" onClick={hitCard}>Hit</Button>
+              <Button variant="danger">Stand</Button>
+            </div>
+            <div className='stats'> 
+              <p>Hand: {score}</p>
+              <p>Money: {money}</p>
+            </div>
+            <div className='hand'>
+              {playerhand.length > 5 ? 
+              <>
+              <div className='row-container'>
+                <div className='card-row'>{arrayFirstHalf}</div>
+                <div className='card-row'>{arraySecondHalf}</div>
+              </div>
+              </>
+              : <div className='card-container'>{playerhand}</div>}
+            </div>
+          </div> 
+          : <div>
+              <button onClick={() => {
+                setStart(true)
+                setBust(false)
+                getDeck()
+                }}>Start</button>
+            </div>}
+      </section>
+      <section>{bust ? <div>Busted. Play Again?</div> : ''}</section>
+      <section>{win ? <div>Winner! Play another round?</div> : ''}</section>
+      
     </div>
   );
 }
